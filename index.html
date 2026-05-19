@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Transition">
+<meta name="theme-color" content="#0f1f3d">
+<title>Retirement Tracker | CAPT Pratt</title>
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:#0f1f3d;--navy-mid:#1b3468;--navy-light:#2a4a8a;
+  --gold:#c9922a;--gold-light:#f0c060;
+  --surface:#f4f6fa;--card:#ffffff;--text:#1a1a2e;--muted:#6b7280;--border:#e2e8f0;
+  --green:#166534;--green-bg:#dcfce7;--amber:#92400e;--amber-bg:#fef3c7;
+  --radius:14px;--shadow:0 2px 16px rgba(15,31,61,.10);--shadow-lg:0 8px 32px rgba(15,31,61,.16);
+  --safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--text);min-height:100vh;padding-bottom:calc(80px + var(--safe-bottom))}
+.app-header{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-mid) 100%);padding:calc(16px + var(--safe-top)) 20px 0;position:sticky;top:0;z-index:100;box-shadow:0 2px 20px rgba(15,31,61,.3)}
+.header-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
+.header-title h1{font-family:'DM Serif Display',serif;font-size:22px;color:#fff;line-height:1.2;letter-spacing:-.3px}
+.header-title p{font-size:11px;color:rgba(255,255,255,.55);margin-top:3px;font-weight:300;letter-spacing:.5px;text-transform:uppercase}
+.sync-badge{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:5px 10px;font-size:10px;color:rgba(255,255,255,.7);cursor:pointer;transition:background .2s;white-space:nowrap}
+.sync-badge:hover{background:rgba(255,255,255,.18)}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:#4ade80}
+.sync-dot.syncing{background:var(--gold-light);animation:pulse 1s infinite}
+.sync-dot.error{background:#f87171}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.progress-strip{display:grid;grid-template-columns:repeat(4,1fr)}
+.prog-stat{padding:10px 0 12px;text-align:center;border-right:1px solid rgba(255,255,255,.08)}
+.prog-stat:last-child{border-right:none}
+.prog-num{font-family:'DM Serif Display',serif;font-size:22px;color:#fff;line-height:1}
+.prog-label{font-size:9px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.6px;margin-top:3px}
+.prog-bar-wrap{height:3px;background:rgba(255,255,255,.15)}
+.prog-bar-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-light));transition:width .5s ease}
+.filter-wrap{background:var(--card);border-bottom:1px solid var(--border);padding:10px 16px;overflow-x:auto;scrollbar-width:none;display:flex;gap:7px;-webkit-overflow-scrolling:touch}
+.filter-wrap::-webkit-scrollbar{display:none}
+.pill{display:flex;align-items:center;gap:5px;padding:6px 13px;border-radius:20px;border:1.5px solid var(--border);background:var(--card);font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .15s;font-family:'DM Sans',sans-serif}
+.pill:hover{border-color:var(--navy-light);color:var(--navy)}
+.pill.active{background:var(--navy);border-color:var(--navy);color:#fff}
+.pill-count{background:rgba(255,255,255,.2);border-radius:10px;padding:1px 6px;font-size:10px}
+.pill:not(.active) .pill-count{background:var(--surface);color:var(--muted)}
+.content{padding:16px;max-width:680px;margin:0 auto}
+.phase-block{margin-bottom:12px;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.phase-header{display:flex;align-items:center;padding:13px 16px;cursor:pointer;user-select:none;gap:11px;transition:filter .15s}
+.phase-header:active{filter:brightness(.92)}
+.phase-num{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-family:'DM Serif Display',serif;font-size:14px;color:#fff;flex-shrink:0}
+.phase-meta{flex:1;min-width:0}
+.phase-title{font-size:13px;font-weight:600;color:#fff;line-height:1.3}
+.phase-sub{font-size:11px;color:rgba(255,255,255,.6);margin-top:1px}
+.phase-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.phase-prog-text{font-size:11px;color:rgba(255,255,255,.7)}
+.phase-chevron{font-size:16px;color:rgba(255,255,255,.6);transition:transform .25s}
+.phase-chevron.open{transform:rotate(180deg)}
+.phase-mini-bar{height:2px}
+.phase-mini-fill{height:100%;transition:width .4s}
+.task-list{background:var(--card)}
+.task-list.hidden{display:none}
+.task-row{display:flex;align-items:flex-start;padding:13px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;gap:12px}
+.task-row:last-child{border-bottom:none}
+.task-row:active{background:var(--surface)}
+.task-row.done{opacity:.5}
+.task-check{width:22px;height:22px;border-radius:6px;border:2px solid var(--border);flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .15s;background:var(--card)}
+.task-check.checked{background:var(--green);border-color:var(--green)}
+.task-check.checked::after{content:'';width:5px;height:9px;border:2px solid #fff;border-top:none;border-left:none;transform:rotate(45deg) translateY(-1px);display:block}
+.task-body{flex:1;min-width:0}
+.task-title{font-size:13.5px;font-weight:500;color:var(--text);line-height:1.4}
+.task-row.done .task-title{text-decoration:line-through;color:var(--muted)}
+.task-meta{display:flex;align-items:center;gap:6px;margin-top:5px;flex-wrap:wrap}
+.tag{font-size:10px;font-weight:600;padding:2px 8px;border-radius:8px;text-transform:uppercase;letter-spacing:.3px}
+.tag-Required{background:#fee2e2;color:#991b1b}
+.tag-Career{background:#dbeafe;color:#1e40af}
+.tag-Financial{background:#fef3c7;color:#92400e}
+.tag-Medical{background:#dcfce7;color:#166534}
+.tag-Admin{background:#ede9fe;color:#5b21b6}
+.task-date{font-size:10px;color:var(--muted)}
+.task-note-toggle{font-size:10px;color:var(--navy-light);margin-top:4px;display:inline-flex;align-items:center;gap:3px}
+.task-note{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.5;padding:8px 10px;background:var(--surface);border-radius:8px;border-left:3px solid var(--border);display:none}
+.task-note.visible{display:block}
+.task-status-btn{flex-shrink:0;padding:4px 9px;border-radius:8px;font-size:10px;font-weight:600;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;white-space:nowrap;margin-top:1px}
+.status-Not-Started{background:var(--surface);color:var(--muted);border:1.5px solid var(--border)}
+.status-In-Progress{background:var(--amber-bg);color:var(--amber);border:1.5px solid #fcd34d}
+.status-Complete{background:var(--green-bg);color:var(--green);border:1.5px solid #86efac}
+.status-On-Hold{background:#fce7f3;color:#9d174d;border:1.5px solid #fbcfe8}
+.status-Deferred{background:#f1f5f9;color:#475569;border:1.5px solid #cbd5e1}
+.status-menu{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-radius:20px 20px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.2);z-index:200;padding:0 0 calc(20px + var(--safe-bottom));transform:translateY(100%);transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
+.status-menu.open{transform:translateY(0)}
+.status-menu-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 0}
+.status-menu-title{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:14px 20px 10px;font-weight:600}
+.status-option{display:flex;align-items:center;gap:12px;padding:14px 20px;cursor:pointer;transition:background .1s;border-top:1px solid var(--border)}
+.status-option:active{background:var(--surface)}
+.status-option-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.status-option-label{font-size:15px;font-weight:500}
+.status-option-check{margin-left:auto;color:var(--green);font-size:16px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:199;display:none}
+.overlay.open{display:block}
+.empty-state{text-align:center;padding:48px 24px;color:var(--muted)}
+.empty-state .emoji{font-size:40px;margin-bottom:12px}
+.loading-screen{position:fixed;inset:0;background:var(--navy);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;transition:opacity .4s}
+.loading-screen.hidden{opacity:0;pointer-events:none}
+.loading-logo{font-family:'DM Serif Display',serif;font-size:28px;color:#fff;margin-bottom:8px}
+.loading-sub{font-size:12px;color:rgba(255,255,255,.4);letter-spacing:1px;text-transform:uppercase;margin-bottom:32px}
+.loading-spinner{width:32px;height:32px;border:2px solid rgba(255,255,255,.15);border-top-color:var(--gold-light);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:calc(24px + var(--safe-bottom));left:50%;transform:translateX(-50%) translateY(80px);background:var(--text);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;z-index:300;transition:transform .3s;white-space:nowrap;box-shadow:var(--shadow-lg)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-logo">Transition Tracker</div>
+  <div class="loading-sub">CAPT Douglas G. Pratt · USN</div>
+  <div class="loading-spinner"></div>
+</div>
+<div class="overlay" id="overlay" onclick="closeStatusMenu()"></div>
+<div class="status-menu" id="statusMenu">
+  <div class="status-menu-handle"></div>
+  <div class="status-menu-title">Update Status</div>
+  <div id="statusOptions"></div>
+</div>
+<div class="toast" id="toast"></div>
+<div class="app-header">
+  <div class="header-top">
+    <div class="header-title">
+      <h1>Transition Tracker</h1>
+      <p>Retirement · Oct 2027</p>
+    </div>
+    <div class="sync-badge" id="syncBadge" onclick="syncNow()">
+      <div class="sync-dot" id="syncDot"></div>
+      <span id="syncLabel">Loading…</span>
+    </div>
+  </div>
+  <div class="progress-strip">
+    <div class="prog-stat"><div class="prog-num" id="statTotal">—</div><div class="prog-label">Total</div></div>
+    <div class="prog-stat"><div class="prog-num" id="statDone">—</div><div class="prog-label">Done</div></div>
+    <div class="prog-stat"><div class="prog-num" id="statActive">—</div><div class="prog-label">Active</div></div>
+    <div class="prog-stat"><div class="prog-num" id="statPct">—</div><div class="prog-label">Complete</div></div>
+  </div>
+  <div class="prog-bar-wrap"><div class="prog-bar-fill" id="progBar" style="width:0%"></div></div>
+</div>
+<div class="filter-wrap" id="filterWrap"></div>
+<div class="content" id="mainContent"></div>
+<script>
+const SUPABASE_URL='https://ybvzxrnmjajhmocwpcev.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlidnp4cm5tamFqaG1vY3dwY2V2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNTA2OTgsImV4cCI6MjA5NDcyNjY5OH0.0IIc6UPxHUdeQcdHkHyrBxHBuqaK_IZcPRLqn_Mo1ck';
+const api=(path,opts={})=>fetch(`${SUPABASE_URL}/rest/v1/${path}`,{headers:{'apikey':SUPABASE_KEY,'Authorization':`Bearer ${SUPABASE_KEY}`,'Content-Type':'application/json','Prefer':'return=minimal',...(opts.headers||{})},method:opts.method||'GET',body:opts.body});
+const PHASES=[
+  {id:1,title:'Now → Oct 2026',sub:'24–12 months out',color:'#1B3A6B'},
+  {id:2,title:'Oct 2026 → Apr 2027',sub:'12–6 months out',color:'#3B2D8A'},
+  {id:3,title:'Apr 2027 → Aug 2027',sub:'6–1 month out',color:'#6B4200'},
+  {id:4,title:'Sep–Oct 2027',sub:'Terminal Leave & Final Out',color:'#1A5C35'},
+  {id:5,title:'Nov 2027 onward',sub:'Post-Retirement',color:'#0D4A55'},
+];
+const TASKS=[
+  {id:'t1',phase:1,title:'Set retirement date & notify PERS-835',cat:'Required',date:'Now',note:'Submit formal retirement request via NSIPS. PERS-835 needs ~6 months to process. Act now.'},
+  {id:'t2',phase:1,title:'Schedule mandatory TAP Initial Counseling',cat:'Required',date:'Now',note:'Must be completed NLT 365 days before retirement. Contact FFSC at Patrick SFB. As O-6 you qualify for Executive Transition GPS.'},
+  {id:'t3',phase:1,title:'Schedule Pre-Separation Counseling (DD Form 2648)',cat:'Required',date:'Now',note:'Required NLT 365 days out. Must be done before registering for TAP class.'},
+  {id:'t4',phase:1,title:'Schedule retirement physical',cat:'Medical',date:'Now–Oct 2026',note:'Schedule through Naval Medical 9–12 months before retirement date.'},
+  {id:'t5',phase:1,title:'Review Official Military Personnel File (OMPF)',cat:'Admin',date:'Now–Oct 2026',note:'Verify all awards, decorations, and service dates via MyNavy Portal. Errors are slow to fix.'},
+  {id:'t6',phase:1,title:'Obtain VMET (DD Form 2586)',cat:'Admin',date:'Now–Oct 2026',note:'Download from milConnect / DoDTAP. Used for resume writing and civilian credential equivalency.'},
+  {id:'t7',phase:1,title:'Begin financial transition planning',cat:'Financial',date:'Now–Oct 2026',note:'Estimate High-3 retirement pay. Review TSP. Build 3–6 month transition fund to cover gap before first DFAS payment.'},
+  {id:'t8',phase:1,title:'Research post-retirement location',cat:'Financial',date:'Now–Oct 2026',note:'Prioritize: state tax exemptions, VA/base proximity, warm weather, major airport within 45 min, ocean within 30 min.'},
+  {id:'t9',phase:1,title:'Review Survivor Benefit Plan (SBP) options',cat:'Financial',date:'Now–Oct 2026',note:'Decision is irrevocable at retirement. Consult a military financial advisor.'},
+  {id:'t10',phase:1,title:'Finalize LinkedIn profile rewrite',cat:'Career',date:'Now–Oct 2026',note:'Add About/headline section, translate NOTU and UWDC roles, add accomplishment bullets.'},
+  {id:'t11',phase:1,title:'Finalize master resume & executive brief',cat:'Career',date:'Now–Oct 2026',note:'Populate remaining placeholders: LinkedIn URL, decorations/awards, professional affiliations.'},
+  {id:'t12',phase:2,title:'Attend Executive Transition GPS',cat:'Required',date:'Oct–Dec 2026',note:'4-day program for O5/O6/E9. Register through FFSC. Per OPNAVINST 1900.2D must be excused from duty.'},
+  {id:'t13',phase:2,title:'File VA disability claim (BDD program)',cat:'Medical',date:'Oct 2026–Jan 2027',note:'File 180–90 days before retirement. Average claim takes ~140 days — file early.'},
+  {id:'t14',phase:2,title:'Complete Individual Transition Plan (ITP)',cat:'Required',date:'Oct–Nov 2026',note:'Required for Navy SkillBridge eligibility and before attending TAP class.'},
+  {id:'t15',phase:2,title:'Explore DoD SkillBridge opportunities',cat:'Career',date:'Oct 2026–Jan 2027',note:'Up to 180 days permissive duty with full military pay to intern with a civilian employer.'},
+  {id:'t16',phase:2,title:'Identify target companies and begin networking',cat:'Career',date:'Oct 2026–Apr 2027',note:'A&D primes (Northrop, L3Harris, Leidos, SAIC), East Coast port authorities, COO/VP roles. Leverage AUKUS/NATO contacts.'},
+  {id:'t17',phase:2,title:'Join MOAA and relevant professional associations',cat:'Career',date:'Oct–Dec 2026',note:'MOAA provides transition resources, networking, and financial/legal counseling for senior officers.'},
+  {id:'t18',phase:2,title:'Plan post-retirement healthcare',cat:'Medical',date:'Oct 2026–Apr 2027',note:'Determine TRICARE Retired plan options. Evaluate FEDVIP for dental/vision.'},
+  {id:'t19',phase:2,title:'Coordinate household goods move planning',cat:'Admin',date:'Jan–Apr 2027',note:'Register in Defense Personal Property System (DPS). Peak summer season books fast.'},
+  {id:'t20',phase:2,title:'Plan retirement ceremony',cat:'Admin',date:'Oct 2026–Jan 2027',note:'Coordinate with NOTU staff, chaplain, and protocol. 6+ month lead time for venue and invitations.'},
+  {id:'t21',phase:2,title:'Request retirement certificates',cat:'Admin',date:'Apr 2027',note:'Per MILPERSMAN 1800-010, request 6 months prior. PERS-835 handles presidential and CNP-signed copies.'},
+  {id:'t22',phase:3,title:'Execute SkillBridge (if approved)',cat:'Career',date:'Apr–Sep 2027',note:'Begin up to 180 days before terminal leave. Goal: job offer in hand before retirement date.'},
+  {id:'t23',phase:3,title:'Complete TAP Capstone appointment',cat:'Required',date:'Jul 2027',note:'Mandatory NLT 90 days before retirement. One-on-one with FFSC TAP staff to verify Career Readiness Standards.'},
+  {id:'t24',phase:3,title:'Apply for VA Health Care enrollment',cat:'Medical',date:'Jun–Jul 2027',note:'Apply within 120 days of separation to avoid a lapse in coverage.'},
+  {id:'t25',phase:3,title:'Submit terminal leave request',cat:'Required',date:'Jul 2027',note:'Terminal leave ~1 Sep 2027. Submit via Navy e-Leave. Coordinate 20 days permissive TDY for house/job hunting.'},
+  {id:'t26',phase:3,title:'Develop interview preparation materials',cat:'Career',date:'Apr–Aug 2027',note:'Build STAR-L stories: NOTU hypersonic flight test, UWDC AUKUS integration, USS Tucson supply chain, NATO/EUCOM ops.'},
+  {id:'t27',phase:3,title:'Register on USAJOBS',cat:'Career',date:'Apr–Aug 2027',note:'TS/SCI clearance is a major asset — list prominently. Use veterans preference.'},
+  {id:'t28',phase:3,title:'Finalize retirement location and housing',cat:'Admin',date:'Apr–Aug 2027',note:'Use permissive TDY for house hunting. Finalize lease/purchase. Coordinate family logistics.'},
+  {id:'t29',phase:3,title:'Review and update estate documents',cat:'Financial',date:'Apr–Aug 2027',note:'Update will, POA, TSP beneficiary. Convert SGLI to VGLI within 240 days of separation. Use JAG now.'},
+  {id:'t30',phase:3,title:'Verify DD-214 draft accuracy',cat:'Admin',date:'Jul–Aug 2027',note:'Available in NSIPS 60–90 days after retirement package submitted. Review all entries before signing.'},
+  {id:'t31',phase:3,title:'Review DoD post-employment ethics rules',cat:'Required',date:'Apr–Aug 2027',note:'1-year cooling-off under 18 U.S.C. §207 may apply given NOTU/TS/SCI. Consult JAG before accepting offers.'},
+  {id:'t32',phase:4,title:'Begin terminal leave (~1 Sep 2027)',cat:'Admin',date:'Sep 2027',note:'Official retirement date remains 31 Oct 2027. Full pay and benefits continue throughout terminal leave.'},
+  {id:'t33',phase:4,title:'Active job search and interviews',cat:'Career',date:'Sep–Oct 2027',note:'Prime hiring time — full active-duty credential, full pay, schedule flexibility. East Coast and EU targets.'},
+  {id:'t34',phase:4,title:'Complete command checkout',cat:'Required',date:'Sep–Oct 2027',note:'Turn in all government equipment, clear base access, complete all checkout signatures.'},
+  {id:'t35',phase:4,title:'Convert SGLI to VGLI',cat:'Financial',date:'Sep–Oct 2027',note:'Must be done within 120 days of separation (reduced coverage up to 240 days).'},
+  {id:'t36',phase:4,title:'Sign final DD-214',cat:'Required',date:'Oct 2027',note:'Review in BUPERS Online. Member-4 copy is your essential veteran credential. Make multiple certified copies.'},
+  {id:'t37',phase:4,title:'Register retired ID and base access',cat:'Admin',date:'Oct 2027',note:'Retired officers retain commissary and exchange privileges. Register ID at nearest installation.'},
+  {id:'t38',phase:4,title:'Attend retirement ceremony',cat:'Admin',date:'Oct 2027',note:''},
+  {id:'t39',phase:5,title:'Verify first DFAS retirement pay deposit',cat:'Financial',date:'Nov–Dec 2027',note:'First payment may take 1–3 months. Monitor account. Interim payments may be available through DFAS.'},
+  {id:'t40',phase:5,title:'Monitor VA disability claim status',cat:'Medical',date:'Nov 2027 onward',note:'Track at VA.gov. If filed via BDD, decision may arrive before or shortly after retirement.'},
+  {id:'t41',phase:5,title:'Enroll in TRICARE Retired',cat:'Medical',date:'Nov 2027',note:'Select plan within 90 days of retirement. Notify DEERS of retirement status.'},
+  {id:'t42',phase:5,title:'Update DEERS status to retired',cat:'Required',date:'Nov 2027',note:'Do this immediately after separation. Affects TRICARE, commissary access, and base privileges.'},
+  {id:'t43',phase:5,title:'File taxes noting military retirement pay',cat:'Financial',date:'Apr 2028',note:'Retirement pay is federally taxable; many states exempt it. File W-4P with DFAS. Consult military CPA.'},
+  {id:'t44',phase:5,title:'Confirm post-employment ethics compliance',cat:'Career',date:'Nov 2027 onward',note:'Before accepting any defense contractor role, confirm you are clear of cooling-off period restrictions.'},
+];
+const STATUS_OPTIONS=[
+  {value:'Not Started',color:'#9ca3af'},{value:'In Progress',color:'#f59e0b'},
+  {value:'Complete',color:'#22c55e'},{value:'On Hold',color:'#ec4899'},{value:'Deferred',color:'#94a3b8'}
+];
+const CATEGORIES=['All','Required','Career','Financial','Medical','Admin'];
+let statuses={},phaseOpen={},activeFilter='All',pendingTaskId=null,noteVisible={};
+
+const api2=(path,opts={})=>fetch(`${SUPABASE_URL}/rest/v1/${path}`,{
+  headers:{'apikey':SUPABASE_KEY,'Authorization':`Bearer ${SUPABASE_KEY}`,'Content-Type':'application/json','Prefer':'return=minimal',...(opts.headers||{})},
+  method:opts.method||'GET',body:opts.body
+});
+
+async function loadFromSupabase(){
+  try{
+    const r=await api2('progress?select=id,status');
+    if(!r.ok)throw new Error();
+    const rows=await r.json();
+    rows.forEach(row=>{statuses[row.id]=row.status;});
+    setSyncState('synced');
+  }catch(e){setSyncState('error');}
+}
+
+async function saveStatus(taskId,status){
+  setSyncState('syncing');
+  try{
+    const r=await api2('progress',{
+      method:'POST',
+      headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},
+      body:JSON.stringify({id:taskId,status,updated_at:new Date().toISOString()})
+    });
+    if(!r.ok)throw new Error();
+    setSyncState('synced');
+    showToast(status==='Complete'?'✓ Marked complete':'Status updated');
+  }catch(e){
+    setSyncState('error');
+    showToast('Sync failed — try again');
+  }
+}
+
+function setSyncState(s){
+  const dot=document.getElementById('syncDot'),lbl=document.getElementById('syncLabel');
+  dot.className='sync-dot'+(s==='syncing'?' syncing':s==='error'?' error':'');
+  lbl.textContent=s==='syncing'?'Syncing…':s==='error'?'Offline':'Synced';
+}
+
+async function syncNow(){
+  setSyncState('syncing');
+  await loadFromSupabase();
+  render();
+  showToast('Progress synced ✓');
+}
+
+function getStatus(id){return statuses[id]||'Not Started';}
+function statusClass(s){return 'status-'+s.replace(/ /g,'-');}
+
+function updateHeader(){
+  const tasks=activeFilter==='All'?TASKS:TASKS.filter(t=>t.cat===activeFilter);
+  const total=tasks.length;
+  const done=tasks.filter(t=>getStatus(t.id)==='Complete').length;
+  const active=tasks.filter(t=>getStatus(t.id)==='In Progress').length;
+  const pct=total?Math.round(done/total*100):0;
+  document.getElementById('statTotal').textContent=total;
+  document.getElementById('statDone').textContent=done;
+  document.getElementById('statActive').textContent=active;
+  document.getElementById('statPct').textContent=pct+'%';
+  document.getElementById('progBar').style.width=pct+'%';
+}
+
+function renderFilters(){
+  const wrap=document.getElementById('filterWrap');
+  wrap.innerHTML='';
+  CATEGORIES.forEach(cat=>{
+    const count=cat==='All'?TASKS.length:TASKS.filter(t=>t.cat===cat).length;
+    const btn=document.createElement('button');
+    btn.className='pill'+(cat===activeFilter?' active':'');
+    btn.innerHTML=`${cat} <span class="pill-count">${count}</span>`;
+    btn.onclick=()=>{activeFilter=cat;render();};
+    wrap.appendChild(btn);
+  });
+}
+
+function render(){
+  renderFilters();
+  updateHeader();
+  const content=document.getElementById('mainContent');
+  content.innerHTML='';
+  const filtered=activeFilter==='All'?TASKS:TASKS.filter(t=>t.cat===activeFilter);
+  let any=false;
+  PHASES.forEach(phase=>{
+    const pts=filtered.filter(t=>t.phase===phase.id);
+    if(!pts.length)return;
+    any=true;
+    const isOpen=phaseOpen[phase.id]!==false;
+    const done=pts.filter(t=>getStatus(t.id)==='Complete').length;
+    const pct=pts.length?Math.round(done/pts.length*100):0;
+    const block=document.createElement('div');
+    block.className='phase-block';
+    const hdr=document.createElement('div');
+    hdr.className='phase-header';
+    hdr.style.background=`linear-gradient(135deg,${phase.color},${phase.color}dd)`;
+    hdr.innerHTML=`<div class="phase-num">${phase.id}</div><div class="phase-meta"><div class="phase-title">${phase.title}</div><div class="phase-sub">${phase.sub}</div></div><div class="phase-right"><span class="phase-prog-text">${done}/${pts.length}</span><span class="phase-chevron ${isOpen?'open':''}">▾</span></div>`;
+    hdr.onclick=()=>{phaseOpen[phase.id]=!isOpen;render();};
+    const miniBar=document.createElement('div');
+    miniBar.className='phase-mini-bar';
+    miniBar.style.background=phase.color+'33';
+    miniBar.innerHTML=`<div class="phase-mini-fill" style="width:${pct}%;background:rgba(255,255,255,0.5)"></div>`;
+    const list=document.createElement('div');
+    list.className='task-list'+(isOpen?'':' hidden');
+    pts.forEach(task=>{
+      const status=getStatus(task.id);
+      const isDone=status==='Complete';
+      const row=document.createElement('div');
+      row.className='task-row'+(isDone?' done':'');
+      const chk=document.createElement('div');
+      chk.className='task-check'+(isDone?' checked':'');
+      chk.onclick=(e)=>{
+        e.stopPropagation();
+        const ns=isDone?'Not Started':'Complete';
+        statuses[task.id]=ns;
+        saveStatus(task.id,ns);
+        render();
+      };
+      const body=document.createElement('div');
+      body.className='task-body';
+      const nv=noteVisible[task.id];
+      body.innerHTML=`<div class="task-title">${task.title}</div><div class="task-meta"><span class="tag tag-${task.cat}">${task.cat}</span><span class="task-date">📅 ${task.date}</span></div>${task.note?`<div class="task-note-toggle" id="ntog-${task.id}">${nv?'▴ Hide note':'▾ Show note'}</div><div class="task-note${nv?' visible':''}" id="note-${task.id}">${task.note}</div>`:''}`;
+      if(task.note){
+        body.querySelector(`#ntog-${task.id}`).onclick=(e)=>{
+          e.stopPropagation();
+          noteVisible[task.id]=!nv;
+          render();
+        };
+      }
+      const btn=document.createElement('button');
+      btn.className=`task-status-btn ${statusClass(status)}`;
+      btn.textContent=status;
+      btn.onclick=(e)=>{e.stopPropagation();openStatusMenu(task.id);};
+      row.appendChild(chk);row.appendChild(body);row.appendChild(btn);
+      list.appendChild(row);
+    });
+    block.appendChild(hdr);block.appendChild(miniBar);block.appendChild(list);
+    content.appendChild(block);
+  });
+  if(!any)content.innerHTML='<div class="empty-state"><div class="emoji">🔍</div><p>No items in this category</p></div>';
+}
+
+function openStatusMenu(taskId){
+  pendingTaskId=taskId;
+  const current=getStatus(taskId);
+  const opts=document.getElementById('statusOptions');
+  opts.innerHTML='';
+  STATUS_OPTIONS.forEach(opt=>{
+    const div=document.createElement('div');
+    div.className='status-option';
+    div.innerHTML=`<div class="status-option-dot" style="background:${opt.color}"></div><span class="status-option-label">${opt.value}</span>${opt.value===current?'<span class="status-option-check">✓</span>':''}`;
+    div.onclick=()=>{statuses[taskId]=opt.value;saveStatus(taskId,opt.value);closeStatusMenu();render();};
+    opts.appendChild(div);
+  });
+  document.getElementById('statusMenu').classList.add('open');
+  document.getElementById('overlay').classList.add('open');
+}
+
+function closeStatusMenu(){
+  document.getElementById('statusMenu').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+async function init(){
+  PHASES.forEach(p=>{phaseOpen[p.id]=true;});
+  await loadFromSupabase();
+  render();
+  const ls=document.getElementById('loadingScreen');
+  ls.classList.add('hidden');
+  setTimeout(()=>ls.remove(),500);
+}
+
+init();
+</script>
+</body>
+</html>
